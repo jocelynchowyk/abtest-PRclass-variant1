@@ -1,0 +1,6 @@
+{
+  "name": "PR Academy",
+  "description": "Subscription masterclasses by Professor PR featuring monthly, annual, and ad-hoc study plans with Singpass age verification and alumni concessions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
