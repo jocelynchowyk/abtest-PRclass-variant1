@@ -5,7 +5,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { createServer as createViteServer } from 'vite';
 
 const PORT = Number(process.env.PORT || 3000);
-const SESSION_SECRET = process.env.SESSION_SECRET || 'pr-academy-singpass-session-secret-2026';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'pr-academy-session-secret-2026';
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const STORE_PATH = path.join(DATA_DIR, 'academy-store.json');
 
@@ -34,14 +34,11 @@ interface StoredUser {
   id: string;
   fullName: string;
   email: string;
-  nricUpper: string;
-  maskedNric: string;
   dob: string;
   studentId: string | null;
   isExistingStudent: boolean;
   passwordHash: string;
   passwordSalt: string;
-  singpassVerified: boolean;
   createdAt: string;
 }
 
@@ -67,7 +64,7 @@ interface StoredOrder {
   billingAddress: string;
   status: 'Active' | 'Confirmed';
   createdAt: string;
-  verifiedAgeAtPurchase: number;
+  ageAtPurchase: number;
 }
 
 interface StoreState {
@@ -159,7 +156,8 @@ const UPCOMING_CLASSES = [
     duration: '90 min',
     format: 'Singapore Campus & Live Stream',
     seatsRemaining: 14,
-    summary: 'How asymmetric incentives, governance rules, and capital structures determine multi-decade organizational durability.',
+    summary:
+      'How asymmetric incentives, governance rules, and capital structures determine multi-decade organizational durability.',
   },
   {
     id: 'cls-02',
@@ -169,7 +167,8 @@ const UPCOMING_CLASSES = [
     duration: '90 min',
     format: 'Singapore Campus & Live Stream',
     seatsRemaining: 9,
-    summary: 'Expected value frameworks, tail-risk calibration, and Bayesian updating applied to real-world market and policy case studies.',
+    summary:
+      'Expected value frameworks, tail-risk calibration, and Bayesian updating applied to real-world market and policy case studies.',
   },
   {
     id: 'cls-03',
@@ -179,7 +178,8 @@ const UPCOMING_CLASSES = [
     duration: '90 min',
     format: 'Live Interactive Stream',
     seatsRemaining: 22,
-    summary: 'Evaluating infrastructure, trade corridors, sovereign balance sheets, and cross-border compounding across ASEAN.',
+    summary:
+      'Evaluating infrastructure, trade corridors, sovereign balance sheets, and cross-border compounding across ASEAN.',
   },
   {
     id: 'cls-04',
@@ -189,7 +189,8 @@ const UPCOMING_CLASSES = [
     duration: '90 min',
     format: 'Singapore Campus & Live Stream',
     seatsRemaining: 11,
-    summary: 'Examining structural competitive advantages when AI, compliance frameworks, and public-private partnerships intersect.',
+    summary:
+      'Examining structural competitive advantages when AI, compliance frameworks, and public-private partnerships intersect.',
   },
 ];
 
@@ -201,47 +202,6 @@ const VALID_ALUMNI_IDS = new Set([
   'PR-2022-041',
 ]);
 
-const SINGPASS_PERSONAS = [
-  {
-    id: 'over40-new',
-    label: 'Tan Wei Ming · Age 45 (Over-40 Concession)',
-    nric: 'S8145920D',
-    fullName: 'Tan Wei Ming',
-    dob: '1981-04-12',
-    email: 'weiming.tan@example.sg',
-    note: 'DOB 12 Apr 1981 · Automatically verified >= 40 years (20% Off)',
-  },
-  {
-    id: 'existing-student',
-    label: 'Lim Hui Ling · Age 28 (Existing Student)',
-    nric: 'S9821345G',
-    fullName: 'Lim Hui Ling',
-    dob: '1998-09-23',
-    email: 'huiling.lim@example.sg',
-    studentId: 'PR-2024-089',
-    note: 'DOB 23 Sep 1998 · Alumni ID PR-2024-089 (15% Off)',
-  },
-  {
-    id: 'combined-both',
-    label: 'Dr. Rajesh Nair · Age 48 (Existing Student + Over 40)',
-    nric: 'S7833102B',
-    fullName: 'Dr. Rajesh Nair',
-    dob: '1978-07-08',
-    email: 'rajesh.nair@example.sg',
-    studentId: 'PR-2023-104',
-    note: 'DOB 08 Jul 1978 · Both Over 40 & Alumni (30% Combined Off)',
-  },
-  {
-    id: 'standard-learner',
-    label: 'Sarah Chen · Age 25 (Standard Applicant)',
-    nric: 'T0129481J',
-    fullName: 'Sarah Chen',
-    dob: '2001-02-14',
-    email: 'sarah.chen@example.sg',
-    note: 'DOB 14 Feb 2001 · Standard learner rate (0% Concession)',
-  },
-];
-
 function hashPassword(password: string, salt?: string) {
   const actualSalt = salt || crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(password, actualSalt, 64).toString('hex');
@@ -251,16 +211,6 @@ function hashPassword(password: string, salt?: string) {
 function verifyPassword(password: string, hash: string, salt: string): boolean {
   const derived = crypto.scryptSync(password, salt, 64).toString('hex');
   return crypto.timingSafeEqual(Buffer.from(derived, 'hex'), Buffer.from(hash, 'hex'));
-}
-
-function maskNric(nric: string): string {
-  const clean = nric.trim().toUpperCase();
-  if (clean.length < 5) return clean;
-  return `${clean[0]}****${clean.slice(-4)}`;
-}
-
-function isValidNric(nric: string): boolean {
-  return /^[STFGM]\d{7}[A-Z]$/i.test(nric.trim());
 }
 
 function computeAge(dobStr: string): number | null {
@@ -358,14 +308,11 @@ function seedDefaultStore(): StoreState {
         id: 'usr_weiming',
         fullName: 'Tan Wei Ming',
         email: 'weiming.tan@example.sg',
-        nricUpper: 'S8145920D',
-        maskedNric: 'S****920D',
         dob: '1981-04-12',
         studentId: null,
         isExistingStudent: false,
         passwordHash: hash,
         passwordSalt: salt,
-        singpassVerified: true,
         createdAt: '2026-10-02T08:15:00.000Z',
       };
     })(),
@@ -375,14 +322,11 @@ function seedDefaultStore(): StoreState {
         id: 'usr_huiling',
         fullName: 'Lim Hui Ling',
         email: 'huiling.lim@example.sg',
-        nricUpper: 'S9821345G',
-        maskedNric: 'S****345G',
         dob: '1998-09-23',
         studentId: 'PR-2024-089',
         isExistingStudent: true,
         passwordHash: hash,
         passwordSalt: salt,
-        singpassVerified: true,
         createdAt: '2026-09-14T11:30:00.000Z',
       };
     })(),
@@ -392,14 +336,11 @@ function seedDefaultStore(): StoreState {
         id: 'usr_rajesh',
         fullName: 'Dr. Rajesh Nair',
         email: 'rajesh.nair@example.sg',
-        nricUpper: 'S7833102B',
-        maskedNric: 'S****102B',
         dob: '1978-07-08',
         studentId: 'PR-2023-104',
         isExistingStudent: true,
         passwordHash: hash,
         passwordSalt: salt,
-        singpassVerified: true,
         createdAt: '2026-08-21T09:00:00.000Z',
       };
     })(),
@@ -427,7 +368,7 @@ function seedDefaultStore(): StoreState {
       billingAddress: '9 Penang Road, Singapore',
       status: 'Active',
       createdAt: '2026-09-14T11:42:00.000Z',
-      verifiedAgeAtPurchase: 27,
+      ageAtPurchase: 27,
     },
   ];
 
@@ -474,11 +415,16 @@ function toPublicUser(user: StoredUser) {
     id: user.id,
     fullName: user.fullName,
     email: user.email,
-    maskedNric: user.maskedNric,
     dob: user.dob,
-    singpassVerified: user.singpassVerified,
     concession,
     createdAt: user.createdAt,
+  };
+}
+
+function toPublicOrder(order: StoredOrder & { verifiedAgeAtPurchase?: number }) {
+  return {
+    ...order,
+    ageAtPurchase: order.ageAtPurchase ?? order.verifiedAgeAtPurchase ?? 0,
   };
 }
 
@@ -534,7 +480,6 @@ async function startServer() {
     res.json({
       plans: SUBSCRIPTION_PLANS,
       classes: UPCOMING_CLASSES,
-      singpassPersonas: SINGPASS_PERSONAS,
       concessionRules: {
         over40Rate: 0.2,
         existingStudentRate: 0.15,
@@ -544,101 +489,18 @@ async function startServer() {
     });
   });
 
-  // Singpass Myinfo simulated OIDC verification endpoint with automated age verification
-  app.post('/api/auth/singpass/verify', (req: Request, res: Response) => {
-    const { fullName, nric, dob, studentId } = req.body as {
+  // Standard learner registration with DOB & optional Student ID
+  app.post('/api/auth/register', (req: Request, res: Response) => {
+    const { fullName, email, password, dob, studentId } = req.body as {
       fullName?: string;
-      nric?: string;
+      email?: string;
+      password?: string;
       dob?: string;
       studentId?: string;
     };
 
-    if (!fullName || !fullName.trim() || fullName.trim().length < 2) {
-      res.status(400).json({ error: 'Please provide your legal full name as registered in Singpass.' });
-      return;
-    }
-
-    if (!nric || !isValidNric(nric)) {
-      res.status(400).json({ error: 'Invalid NRIC/FIN format. Expected format e.g. S8145920D or T0129481J.' });
-      return;
-    }
-
-    if (!dob) {
-      res.status(400).json({ error: 'Date of Birth from Singpass Myinfo is required for age verification.' });
-      return;
-    }
-
-    const age = computeAge(dob);
-    if (age === null) {
-      res.status(400).json({ error: 'Invalid Date of Birth. Please use YYYY-MM-DD for a valid learner age.' });
-      return;
-    }
-
-    const nricUpper = nric.trim().toUpperCase();
-    const maskedNric = maskNric(nricUpper);
-    const studentCheck = checkExistingStudent(studentId);
-    if (studentId && studentId.trim() && !studentCheck.valid) {
-      res.status(400).json({
-        error: 'Student ID not found in PR Academy Alumni Registry (try e.g. PR-2024-089 or leave blank if new).',
-      });
-      return;
-    }
-
-    const store = loadStore();
-    const existingUser = store.users.find((u) => u.nricUpper === nricUpper);
-    const effectiveExistingStudent = studentCheck.valid || Boolean(existingUser?.isExistingStudent);
-    const effectiveStudentId = studentCheck.normalized || existingUser?.studentId || null;
-
-    const concession = computeConcession(dob, effectiveExistingStudent, effectiveStudentId);
-
-    const verificationToken = signPayload({
-      type: 'singpass_assertion',
-      fullName: fullName.trim(),
-      nricUpper,
-      maskedNric,
-      dob: dob.trim(),
-      studentId: effectiveStudentId,
-      isExistingStudent: effectiveExistingStudent,
-      exp: Date.now() + 1000 * 60 * 20,
-    });
-
-    res.json({
-      verificationToken,
-      fullName: fullName.trim(),
-      maskedNric,
-      nric: nricUpper,
-      dob: dob.trim(),
-      concession,
-      existingAccountEmail: existingUser?.email,
-      verifiedAt: new Date().toISOString(),
-    });
-  });
-
-  // Complete registration using verified Singpass assertion token
-  app.post('/api/auth/register', (req: Request, res: Response) => {
-    const { verificationToken, email, password } = req.body as {
-      verificationToken?: string;
-      email?: string;
-      password?: string;
-    };
-
-    if (!verificationToken) {
-      res.status(400).json({ error: 'Singpass Myinfo verification is required before registering.' });
-      return;
-    }
-
-    const assertion = verifySignedPayload<{
-      type: string;
-      fullName: string;
-      nricUpper: string;
-      maskedNric: string;
-      dob: string;
-      studentId: string | null;
-      isExistingStudent: boolean;
-    }>(verificationToken);
-
-    if (!assertion || assertion.type !== 'singpass_assertion') {
-      res.status(400).json({ error: 'Singpass verification expired or invalid. Please re-verify via Singpass.' });
+    if (!fullName || fullName.trim().length < 2) {
+      res.status(400).json({ error: 'Please enter your full name.' });
       return;
     }
 
@@ -652,6 +514,19 @@ async function startServer() {
       return;
     }
 
+    if (!dob || computeAge(dob) === null) {
+      res.status(400).json({ error: 'Please enter a valid Date of Birth.' });
+      return;
+    }
+
+    const studentCheck = checkExistingStudent(studentId);
+    if (studentId && studentId.trim() && !studentCheck.valid) {
+      res.status(400).json({
+        error: 'Student ID not found in PR Academy Alumni Registry (try e.g. PR-2024-089 or leave blank if new).',
+      });
+      return;
+    }
+
     const store = loadStore();
     const emailLower = email.trim().toLowerCase();
 
@@ -660,24 +535,16 @@ async function startServer() {
       return;
     }
 
-    if (store.users.some((u) => u.nricUpper === assertion.nricUpper)) {
-      res.status(409).json({ error: 'This Singpass NRIC is already registered. Please sign in with Singpass or password.' });
-      return;
-    }
-
     const { hash, salt } = hashPassword(password);
     const newUser: StoredUser = {
       id: `usr_${crypto.randomUUID().slice(0, 8)}`,
-      fullName: assertion.fullName,
+      fullName: fullName.trim(),
       email: emailLower,
-      nricUpper: assertion.nricUpper,
-      maskedNric: assertion.maskedNric,
-      dob: assertion.dob,
-      studentId: assertion.studentId,
-      isExistingStudent: assertion.isExistingStudent,
+      dob: dob.trim(),
+      studentId: studentCheck.normalized,
+      isExistingStudent: studentCheck.valid,
       passwordHash: hash,
       passwordSalt: salt,
-      singpassVerified: true,
       createdAt: new Date().toISOString(),
     };
 
@@ -692,74 +559,30 @@ async function startServer() {
     });
   });
 
-  // Standard Login with Email or NRIC + Password
+  // Standard Login with Email + Password
   app.post('/api/auth/login', (req: Request, res: Response) => {
-    const { identifier, password } = req.body as { identifier?: string; password?: string };
-    if (!identifier || !password) {
-      res.status(400).json({ error: 'Please enter your email or NRIC and password.' });
+    const { email, identifier, password } = req.body as {
+      email?: string;
+      identifier?: string;
+      password?: string;
+    };
+    const rawEmail = email || identifier;
+    if (!rawEmail || !password) {
+      res.status(400).json({ error: 'Please enter your email address and password.' });
       return;
     }
 
-    const norm = identifier.trim().toLowerCase();
+    const norm = rawEmail.trim().toLowerCase();
     const store = loadStore();
-    const user = store.users.find(
-      (u) => u.email.toLowerCase() === norm || u.nricUpper.toLowerCase() === norm
-    );
+    const user = store.users.find((u) => u.email.toLowerCase() === norm);
 
     if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
-      res.status(401).json({ error: 'Incorrect credentials. Check your email/NRIC and password.' });
+      res.status(401).json({ error: 'Incorrect email or password.' });
       return;
     }
 
     const sessionToken = issueSession(res, user);
-    const orders = store.orders.filter((o) => o.userId === user.id);
-    res.json({
-      user: toPublicUser(user),
-      orders,
-      sessionToken,
-    });
-  });
-
-  // Quick Sign-In via verified Singpass token (for returning Singpass learners)
-  app.post('/api/auth/singpass/login', (req: Request, res: Response) => {
-    const { verificationToken } = req.body as { verificationToken?: string };
-    if (!verificationToken) {
-      res.status(400).json({ error: 'Missing Singpass assertion token.' });
-      return;
-    }
-
-    const assertion = verifySignedPayload<{
-      type: string;
-      nricUpper: string;
-      dob: string;
-      studentId: string | null;
-      isExistingStudent: boolean;
-    }>(verificationToken);
-
-    if (!assertion || assertion.type !== 'singpass_assertion') {
-      res.status(400).json({ error: 'Singpass assertion invalid or expired.' });
-      return;
-    }
-
-    const store = loadStore();
-    const user = store.users.find((u) => u.nricUpper === assertion.nricUpper);
-    if (!user) {
-      res.status(404).json({
-        error: 'No existing PR Academy account linked to this NRIC yet. Complete step 2 to finish registering.',
-        needsRegistration: true,
-      });
-      return;
-    }
-
-    // Update student status if newly verified during Singpass sign-in
-    if (assertion.isExistingStudent && !user.isExistingStudent) {
-      user.isExistingStudent = true;
-      user.studentId = assertion.studentId;
-      saveStore(store);
-    }
-
-    const sessionToken = issueSession(res, user);
-    const orders = store.orders.filter((o) => o.userId === user.id);
+    const orders = store.orders.filter((o) => o.userId === user.id).map(toPublicOrder);
     res.json({
       user: toPublicUser(user),
       orders,
@@ -779,7 +602,7 @@ async function startServer() {
     const check = checkExistingStudent(studentId);
     if (!check.valid || !check.normalized) {
       res.status(400).json({
-        error: 'Student ID could not be verified in the PR Academy Alumni Registry (e.g. PR-2024-089).',
+        error: 'Student ID not found in the PR Academy Alumni Registry (e.g. PR-2024-089).',
       });
       return;
     }
@@ -806,7 +629,7 @@ async function startServer() {
       return;
     }
     const store = loadStore();
-    const orders = store.orders.filter((o) => o.userId === user.id);
+    const orders = store.orders.filter((o) => o.userId === user.id).map(toPublicOrder);
     res.json({ user: toPublicUser(user), orders });
   });
 
@@ -821,7 +644,7 @@ async function startServer() {
     const user = getAuthenticatedUser(req);
     if (!user) {
       res.status(401).json({
-        error: 'Singpass-verified account required to complete subscription checkout.',
+        error: 'Please sign in or create an account to complete subscription checkout.',
       });
       return;
     }
@@ -928,7 +751,7 @@ async function startServer() {
       billingAddress: billingAddress.trim(),
       status: 'Active',
       createdAt: new Date().toISOString(),
-      verifiedAgeAtPurchase: concession.age,
+      ageAtPurchase: concession.age,
     };
 
     store.orders.unshift(newOrder);

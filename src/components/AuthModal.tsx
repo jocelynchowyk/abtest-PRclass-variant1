@@ -1,52 +1,48 @@
-import { CheckCircle2, Lock, ShieldCheck, UserCheck, X } from 'lucide-react';
+import { Lock, UserPlus, X } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
-import {
-  loginWithPassword,
-  loginWithSingpassToken,
-  registerWithSingpass,
-  verifySingpassMyinfo,
-} from '../lib/api';
-import type {
-  SingpassPersona,
-  SingpassVerificationResult,
-  SubscriptionOrder,
-  UserProfile,
-} from '../types';
+import { loginWithPassword, registerAccount } from '../lib/api';
+import type { SubscriptionOrder, UserProfile } from '../types';
 
 interface AuthModalProps {
   open: boolean;
   initialMode: 'login' | 'register';
-  personas: SingpassPersona[];
   onClose: () => void;
   onAuthenticated: (user: UserProfile, orders: SubscriptionOrder[]) => void;
+}
+
+function previewAge(dob: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const now = new Date();
+  let age = now.getUTCFullYear() - y;
+  if (now.getUTCMonth() + 1 < mo || (now.getUTCMonth() + 1 === mo && now.getUTCDate() < d)) {
+    age -= 1;
+  }
+  return age >= 12 && age <= 115 ? age : null;
 }
 
 export function AuthModal({
   open,
   initialMode,
-  personas,
   onClose,
   onAuthenticated,
 }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
 
   // Login state
-  const [identifier, setIdentifier] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Singpass Myinfo verification state
-  const [spFullName, setSpFullName] = useState('Tan Wei Ming');
-  const [spNric, setSpNric] = useState('S8145920D');
-  const [spDob, setSpDob] = useState('1981-04-12');
-  const [spStudentId, setSpStudentId] = useState('');
-  const [spError, setSpError] = useState<string | null>(null);
-  const [spLoading, setSpLoading] = useState(false);
-  const [verifiedData, setVerifiedData] = useState<SingpassVerificationResult | null>(null);
-
-  // Registration Step 2 state
+  // Registration state
+  const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [regDob, setRegDob] = useState('1984-06-15');
+  const [regStudentId, setRegStudentId] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regError, setRegError] = useState<string | null>(null);
   const [regLoading, setRegLoading] = useState(false);
@@ -57,16 +53,11 @@ export function AuthModal({
 
   if (!open) return null;
 
-  const applyPersona = (persona: SingpassPersona) => {
-    setSpFullName(persona.fullName);
-    setSpNric(persona.nric);
-    setSpDob(persona.dob);
-    setSpStudentId(persona.studentId || '');
-    setRegEmail(persona.email);
-    setVerifiedData(null);
-    setSpError(null);
-    setRegError(null);
-  };
+  const computedPreviewAge = previewAge(regDob);
+  const previewIsOver40 = computedPreviewAge !== null && computedPreviewAge >= 40;
+  const previewIsStudent = /^PR-202[0-6]-\d{3}$/i.test(regStudentId.trim());
+  const previewDiscountPct =
+    previewIsOver40 && previewIsStudent ? 30 : previewIsOver40 ? 20 : previewIsStudent ? 15 : 0;
 
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,7 +65,7 @@ export function AuthModal({
     setLoginLoading(true);
     try {
       const res = await loginWithPassword({
-        identifier: identifier.trim(),
+        email: loginEmail.trim(),
         password: loginPassword,
       });
       onAuthenticated(res.user, res.orders);
@@ -86,56 +77,17 @@ export function AuthModal({
     }
   };
 
-  const handleSingpassVerify = async (e: FormEvent) => {
+  const handleRegisterSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setSpError(null);
-    setRegError(null);
-    setSpLoading(true);
-    try {
-      const result = await verifySingpassMyinfo({
-        fullName: spFullName,
-        nric: spNric,
-        dob: spDob,
-        studentId: spStudentId || undefined,
-      });
-      setVerifiedData(result);
-      if (result.existingAccountEmail && !regEmail) {
-        setRegEmail(result.existingAccountEmail);
-      }
-    } catch (err) {
-      setSpError(err instanceof Error ? err.message : 'Singpass verification failed.');
-    } finally {
-      setSpLoading(false);
-    }
-  };
-
-  const handleQuickSingpassSignIn = async () => {
-    if (!verifiedData) return;
     setRegError(null);
     setRegLoading(true);
     try {
-      const res = await loginWithSingpassToken(verifiedData.verificationToken);
-      onAuthenticated(res.user, res.orders);
-      onClose();
-    } catch (err) {
-      setRegError(
-        err instanceof Error ? err.message : 'Could not sign in with Singpass.'
-      );
-    } finally {
-      setRegLoading(false);
-    }
-  };
-
-  const handleCompleteRegistration = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!verifiedData) return;
-    setRegError(null);
-    setRegLoading(true);
-    try {
-      const res = await registerWithSingpass({
-        verificationToken: verifiedData.verificationToken,
+      const res = await registerAccount({
+        fullName: regFullName.trim(),
         email: regEmail.trim(),
         password: regPassword,
+        dob: regDob,
+        studentId: regStudentId.trim() || undefined,
       });
       onAuthenticated(res.user, res.orders);
       onClose();
@@ -153,16 +105,16 @@ export function AuthModal({
       aria-modal="true"
       aria-labelledby="auth-modal-title"
     >
-      <div className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-lg border border-[#E4E4E0] bg-white shadow-2xl">
+      <div className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[#E4E4E0] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-[#E4E4E0] px-6 py-4">
           <div>
             <h2 id="auth-modal-title" className="font-display text-xl font-semibold text-[#141413]">
-              {mode === 'login' ? 'Sign In to PR Academy' : 'Register via Singpass Myinfo'}
+              {mode === 'login' ? 'Sign In to PR Academy' : 'Create Learner Account'}
             </h2>
             <p className="mt-0.5 text-xs text-[#78716C]">
               {mode === 'login'
-                ? 'Access your subscriptions, seminar seats, and verified concessions.'
-                : 'Automated age verification for Over-40 and Existing Student concessions.'}
+                ? 'Access your subscriptions, seminar seats, and tuition concessions.'
+                : 'Register with your email to enroll and apply eligible concessions.'}
             </p>
           </div>
           <button
@@ -198,7 +150,7 @@ export function AuthModal({
                   : 'text-[#57534E] hover:text-[#141413]'
               }`}
             >
-              Register with Singpass
+              Create Account
             </button>
           </div>
         </div>
@@ -209,18 +161,18 @@ export function AuthModal({
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
                   <label
-                    htmlFor="login-identifier"
+                    htmlFor="login-email"
                     className="block text-xs font-medium text-[#44403C] mb-1.5"
                   >
-                    Email Address or NRIC
+                    Email Address
                   </label>
                   <input
-                    id="login-identifier"
-                    type="text"
+                    id="login-email"
+                    type="email"
                     required
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="weiming.tan@example.sg or S8145920D"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="weiming.tan@example.sg"
                     className="w-full rounded-md border border-[#D6D3D1] bg-white px-3.5 py-2.5 text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
                   />
                 </div>
@@ -255,9 +207,10 @@ export function AuthModal({
                 <button
                   type="submit"
                   disabled={loginLoading}
-                  className="w-full rounded-md bg-[#141413] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#292524] disabled:opacity-60 transition-colors cursor-pointer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#141413] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#292524] disabled:opacity-60 transition-colors cursor-pointer"
                 >
-                  {loginLoading ? 'Signing In...' : 'Sign In'}
+                  <Lock className="h-4 w-4" aria-hidden="true" />
+                  <span>{loginLoading ? 'Signing In...' : 'Sign In'}</span>
                 </button>
               </form>
 
@@ -269,7 +222,7 @@ export function AuthModal({
                   <button
                     type="button"
                     onClick={() => {
-                      setIdentifier('weiming.tan@example.sg');
+                      setLoginEmail('weiming.tan@example.sg');
                       setLoginPassword('Pass1234!');
                     }}
                     className="rounded-md border border-[#E4E4E0] bg-[#FAFAF9] px-3 py-2 text-left text-xs hover:border-[#141413] transition-colors cursor-pointer"
@@ -280,7 +233,7 @@ export function AuthModal({
                   <button
                     type="button"
                     onClick={() => {
-                      setIdentifier('huiling.lim@example.sg');
+                      setLoginEmail('huiling.lim@example.sg');
                       setLoginPassword('Pass1234!');
                     }}
                     className="rounded-md border border-[#E4E4E0] bg-[#FAFAF9] px-3 py-2 text-left text-xs hover:border-[#141413] transition-colors cursor-pointer"
@@ -291,7 +244,7 @@ export function AuthModal({
                   <button
                     type="button"
                     onClick={() => {
-                      setIdentifier('rajesh.nair@example.sg');
+                      setLoginEmail('rajesh.nair@example.sg');
                       setLoginPassword('Pass1234!');
                     }}
                     className="rounded-md border border-[#E4E4E0] bg-[#FAFAF9] px-3 py-2 text-left text-xs hover:border-[#141413] transition-colors cursor-pointer"
@@ -306,276 +259,122 @@ export function AuthModal({
                 <button
                   type="button"
                   onClick={() => setMode('register')}
-                  className="text-xs font-medium text-[#C8102E] hover:underline cursor-pointer"
+                  className="text-xs font-medium text-[#9F1239] hover:underline cursor-pointer"
                 >
-                  New to PR Academy? Register with Singpass for automated age verification
+                  New to PR Academy? Create an account
                 </button>
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Step 1: Singpass Myinfo Verification */}
-              <div className="rounded-md border border-[#E4E4E0] bg-[#FAFAF9] p-4">
-                <div className="flex items-center justify-between gap-4 border-b border-[#E4E4E0] pb-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-[#C8102E]" aria-hidden="true" />
-                    <span className="text-sm font-semibold text-[#141413]">
-                      Singpass Myinfo Identity & Age Verification
-                    </span>
-                  </div>
-                  <span className="font-mono text-xs font-medium text-[#C8102E]">
-                    singpass
-                  </span>
-                </div>
-
-                {/* Preset Myinfo Test Profiles */}
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-[#57534E] mb-2">
-                    Select a Singpass Myinfo Applicant Profile (or enter custom details below):
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {personas.map((persona) => (
-                      <button
-                        key={persona.id}
-                        type="button"
-                        onClick={() => applyPersona(persona)}
-                        className={`rounded-md border p-2.5 text-left text-xs transition-colors cursor-pointer ${
-                          spNric === persona.nric && spDob === persona.dob
-                            ? 'border-[#C8102E] bg-white'
-                            : 'border-[#E4E4E0] bg-white hover:border-[#A8A29E]'
-                        }`}
-                      >
-                        <div className="font-medium text-[#141413]">{persona.fullName}</div>
-                        <div className="mt-0.5 text-[#78716C]">{persona.note}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <form onSubmit={handleSingpassVerify} className="space-y-3.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="sp-name" className="block text-xs font-medium text-[#44403C] mb-1">
-                        Legal Full Name (Myinfo)
-                      </label>
-                      <input
-                        id="sp-name"
-                        type="text"
-                        required
-                        value={spFullName}
-                        onChange={(e) => {
-                          setSpFullName(e.target.value);
-                          setVerifiedData(null);
-                        }}
-                        className="w-full rounded-md border border-[#D6D3D1] bg-white px-3 py-2 text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="sp-nric" className="block text-xs font-medium text-[#44403C] mb-1">
-                        NRIC / FIN
-                      </label>
-                      <input
-                        id="sp-nric"
-                        type="text"
-                        required
-                        value={spNric}
-                        onChange={(e) => {
-                          setSpNric(e.target.value.toUpperCase());
-                          setVerifiedData(null);
-                        }}
-                        placeholder="S8145920D"
-                        className="w-full rounded-md border border-[#D6D3D1] bg-white px-3 py-2 font-mono text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="sp-dob" className="block text-xs font-medium text-[#44403C] mb-1">
-                        Date of Birth (Verified for Over-40)
-                      </label>
-                      <input
-                        id="sp-dob"
-                        type="date"
-                        required
-                        value={spDob}
-                        onChange={(e) => {
-                          setSpDob(e.target.value);
-                          setVerifiedData(null);
-                        }}
-                        className="w-full rounded-md border border-[#D6D3D1] bg-white px-3 py-2 font-mono text-sm text-[#141413] focus:border-[#141413] focus:outline-none tabular-nums"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="sp-student-id" className="block text-xs font-medium text-[#44403C] mb-1">
-                        Existing Student ID (Optional)
-                      </label>
-                      <input
-                        id="sp-student-id"
-                        type="text"
-                        value={spStudentId}
-                        onChange={(e) => {
-                          setSpStudentId(e.target.value.toUpperCase());
-                          setVerifiedData(null);
-                        }}
-                        placeholder="e.g. PR-2024-089"
-                        className="w-full rounded-md border border-[#D6D3D1] bg-white px-3 py-2 font-mono text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {spError && (
-                    <div
-                      role="alert"
-                      className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-xs text-[#991B1B]"
-                    >
-                      {spError}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={spLoading}
-                    className="w-full rounded-md bg-[#C8102E] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#A50D26] disabled:opacity-60 transition-colors cursor-pointer"
-                  >
-                    {spLoading
-                      ? 'Verifying Myinfo & Computing Age...'
-                      : 'Authorize Singpass Myinfo & Verify Age'}
-                  </button>
-                </form>
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="reg-name" className="block text-xs font-medium text-[#44403C] mb-1">
+                  Full Name
+                </label>
+                <input
+                  id="reg-name"
+                  type="text"
+                  required
+                  value={regFullName}
+                  onChange={(e) => setRegFullName(e.target.value)}
+                  placeholder="e.g. Alex Tan"
+                  className="w-full rounded-md border border-[#D6D3D1] bg-white px-3.5 py-2 text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
+                />
               </div>
 
-              {/* Automated Age Verification Result & Step 2 */}
-              {verifiedData && (
-                <div className="space-y-4 rounded-md border border-[#141413] bg-white p-5">
-                  <div className="flex items-start justify-between gap-3 border-b border-[#ECECE8] pb-3">
-                    <div className="flex items-start gap-2.5">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#15803D]" aria-hidden="true" />
-                      <div>
-                        <p className="text-sm font-semibold text-[#141413]">
-                          Singpass Myinfo Verified · {verifiedData.fullName}
-                        </p>
-                        <p className="mt-0.5 text-xs text-[#57534E] font-mono tabular-nums">
-                          NRIC {verifiedData.maskedNric} · DOB {verifiedData.dob} · Verified Age{' '}
-                          {verifiedData.concession.age}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="reg-email" className="block text-xs font-medium text-[#44403C] mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    id="reg-email"
+                    type="email"
+                    required
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="name@example.sg"
+                    className="w-full rounded-md border border-[#D6D3D1] bg-white px-3.5 py-2 text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reg-password" className="block text-xs font-medium text-[#44403C] mb-1">
+                    Password (min. 8 chars)
+                  </label>
+                  <input
+                    id="reg-password"
+                    type="password"
+                    required
+                    minLength={8}
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                    className="w-full rounded-md border border-[#D6D3D1] bg-white px-3.5 py-2 text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
+                  />
+                </div>
+              </div>
 
-                  {/* Automated Concession Breakdown */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div className="rounded border border-[#ECECE8] bg-[#FAFAF9] p-3">
-                      <div className="text-[#78716C]">Over-40 Check</div>
-                      <div className="mt-1 font-semibold text-[#141413] tabular-nums">
-                        {verifiedData.concession.isOver40
-                          ? `Eligible (Age ${verifiedData.concession.age} ≥ 40)`
-                          : `Standard (Age ${verifiedData.concession.age} < 40)`}
-                      </div>
-                    </div>
-                    <div className="rounded border border-[#ECECE8] bg-[#FAFAF9] p-3">
-                      <div className="text-[#78716C]">Existing Student</div>
-                      <div className="mt-1 font-semibold text-[#141413]">
-                        {verifiedData.concession.isExistingStudent
-                          ? `Verified (${verifiedData.concession.studentId || 'Alumni'})`
-                          : 'New Applicant'}
-                      </div>
-                    </div>
-                    <div className="rounded border border-[#ECECE8] bg-[#FAFAF9] p-3">
-                      <div className="text-[#78716C]">Tuition Concession</div>
-                      <div className="mt-1 font-mono font-semibold text-[#9F1239] tabular-nums">
-                        {Math.round(verifiedData.concession.appliedRate * 100)}% Off All Plans
-                      </div>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="reg-dob" className="block text-xs font-medium text-[#44403C] mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    id="reg-dob"
+                    type="date"
+                    required
+                    value={regDob}
+                    onChange={(e) => setRegDob(e.target.value)}
+                    className="w-full rounded-md border border-[#D6D3D1] bg-white px-3.5 py-2 font-mono text-sm text-[#141413] focus:border-[#141413] focus:outline-none tabular-nums"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reg-student-id" className="block text-xs font-medium text-[#44403C] mb-1">
+                    Existing Student ID (Optional)
+                  </label>
+                  <input
+                    id="reg-student-id"
+                    type="text"
+                    value={regStudentId}
+                    onChange={(e) => setRegStudentId(e.target.value.toUpperCase())}
+                    placeholder="e.g. PR-2024-089"
+                    className="w-full rounded-md border border-[#D6D3D1] bg-white px-3.5 py-2 font-mono text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
+                  />
+                </div>
+              </div>
 
-                  {verifiedData.existingAccountEmail ? (
-                    <div className="space-y-3 pt-1">
-                      <p className="text-xs text-[#44403C]">
-                        This Singpass NRIC is already linked to{' '}
-                        <span className="font-medium text-[#141413]">
-                          {verifiedData.existingAccountEmail}
-                        </span>
-                        . You can sign in directly with your verified Singpass session.
-                      </p>
-                      {regError && (
-                        <div
-                          role="alert"
-                          className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-xs text-[#991B1B]"
-                        >
-                          {regError}
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        disabled={regLoading}
-                        onClick={handleQuickSingpassSignIn}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#141413] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#292524] cursor-pointer"
-                      >
-                        <UserCheck className="h-4 w-4" aria-hidden="true" />
-                        {regLoading ? 'Signing In...' : 'Sign In with Verified Singpass'}
-                      </button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleCompleteRegistration} className="space-y-3.5 pt-1">
-                      <p className="text-xs font-medium text-[#44403C]">
-                        Step 2: Set your login email and password to complete registration
-                      </p>
+              {/* Dynamic Concession Eligibility Readout */}
+              <div className="rounded-md border border-[#E4E4E0] bg-[#FAFAF9] px-4 py-3 text-xs tabular-nums">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#57534E]">
+                    {computedPreviewAge !== null
+                      ? `Age ${computedPreviewAge}${previewIsOver40 ? ' (>40 eligible)' : ''}`
+                      : 'Enter Date of Birth'}
+                  </span>
+                  <span className="font-mono font-semibold text-[#9F1239]">
+                    {previewDiscountPct}% tuition concession
+                  </span>
+                </div>
+              </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="reg-email" className="block text-xs font-medium text-[#44403C] mb-1">
-                            Email Address
-                          </label>
-                          <input
-                            id="reg-email"
-                            type="email"
-                            required
-                            value={regEmail}
-                            onChange={(e) => setRegEmail(e.target.value)}
-                            placeholder="name@example.sg"
-                            className="w-full rounded-md border border-[#D6D3D1] bg-white px-3 py-2 text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="reg-password" className="block text-xs font-medium text-[#44403C] mb-1">
-                            Create Password (min. 8 chars)
-                          </label>
-                          <input
-                            id="reg-password"
-                            type="password"
-                            required
-                            minLength={8}
-                            value={regPassword}
-                            onChange={(e) => setRegPassword(e.target.value)}
-                            placeholder="Minimum 8 characters"
-                            className="w-full rounded-md border border-[#D6D3D1] bg-white px-3 py-2 text-sm text-[#141413] focus:border-[#141413] focus:outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {regError && (
-                        <div
-                          role="alert"
-                          className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-xs text-[#991B1B]"
-                        >
-                          {regError}
-                        </div>
-                      )}
-
-                      <button
-                        type="submit"
-                        disabled={regLoading}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#141413] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#292524] disabled:opacity-60 cursor-pointer"
-                      >
-                        <Lock className="h-4 w-4" aria-hidden="true" />
-                        {regLoading ? 'Creating Verified Account...' : 'Complete Registration & Sign In'}
-                      </button>
-                    </form>
-                  )}
+              {regError && (
+                <div
+                  role="alert"
+                  className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3.5 py-2.5 text-xs text-[#991B1B]"
+                >
+                  {regError}
                 </div>
               )}
-            </div>
+
+              <button
+                type="submit"
+                disabled={regLoading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#9F1239] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#881337] disabled:opacity-60 transition-colors cursor-pointer"
+              >
+                <UserPlus className="h-4 w-4" aria-hidden="true" />
+                <span>{regLoading ? 'Creating Account...' : 'Create Account & Sign In'}</span>
+              </button>
+            </form>
           )}
         </div>
       </div>

@@ -1,8 +1,6 @@
 import type {
   MasterclassSession,
   PlanId,
-  SingpassPersona,
-  SingpassVerificationResult,
   SubscriptionOrder,
   SubscriptionPlan,
   UserProfile,
@@ -50,10 +48,8 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     const err = new Error(data.error || 'Request failed') as Error & {
       status?: number;
-      needsRegistration?: boolean;
     };
     err.status = res.status;
-    err.needsRegistration = data.needsRegistration;
     throw err;
   }
 
@@ -63,7 +59,6 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
 export interface CatalogResponse {
   plans: SubscriptionPlan[];
   classes: MasterclassSession[];
-  singpassPersonas: SingpassPersona[];
   concessionRules: {
     over40Rate: number;
     existingStudentRate: number;
@@ -80,22 +75,12 @@ export function fetchCurrentUser() {
   return apiFetch<{ user: UserProfile | null; orders: SubscriptionOrder[] }>('/api/auth/me');
 }
 
-export function verifySingpassMyinfo(payload: {
+export async function registerAccount(payload: {
   fullName: string;
-  nric: string;
-  dob: string;
-  studentId?: string;
-}) {
-  return apiFetch<SingpassVerificationResult>('/api/auth/singpass/verify', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function registerWithSingpass(payload: {
-  verificationToken: string;
   email: string;
   password: string;
+  dob: string;
+  studentId?: string;
 }) {
   const res = await apiFetch<{
     user: UserProfile;
@@ -109,7 +94,7 @@ export async function registerWithSingpass(payload: {
   return res;
 }
 
-export async function loginWithPassword(payload: { identifier: string; password: string }) {
+export async function loginWithPassword(payload: { email: string; password: string }) {
   const res = await apiFetch<{
     user: UserProfile;
     orders: SubscriptionOrder[];
@@ -117,19 +102,6 @@ export async function loginWithPassword(payload: { identifier: string; password:
   }>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
-  });
-  setStoredToken(res.sessionToken);
-  return res;
-}
-
-export async function loginWithSingpassToken(verificationToken: string) {
-  const res = await apiFetch<{
-    user: UserProfile;
-    orders: SubscriptionOrder[];
-    sessionToken: string;
-  }>('/api/auth/singpass/login', {
-    method: 'POST',
-    body: JSON.stringify({ verificationToken }),
   });
   setStoredToken(res.sessionToken);
   return res;

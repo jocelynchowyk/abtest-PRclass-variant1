@@ -64,7 +64,7 @@ export function AccountModal({
               Learner Account & Enrollments
             </h2>
             <p className="mt-0.5 text-xs text-[#78716C]">
-              Singpass-verified profile and active PR Academy subscriptions
+              Registered learner profile, tuition concessions, and active PR Academy subscriptions
             </p>
           </div>
           <button
@@ -78,21 +78,21 @@ export function AccountModal({
         </div>
 
         <div className="space-y-6 p-6">
-          {/* Verified Singpass Record */}
+          {/* Learner Profile Record */}
           <section className="rounded-md border border-[#E4E4E0] bg-[#FAFAF9] p-5">
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#E4E4E0] pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-[#C8102E]" aria-hidden="true" />
+                  <ShieldCheck className="h-4 w-4 text-[#9F1239]" aria-hidden="true" />
                   <span className="text-xs font-semibold tracking-wide text-[#57534E]">
-                    Singpass Myinfo Verified Identity
+                    Registered Learner Profile
                   </span>
                 </div>
                 <h3 className="mt-1 font-display text-lg font-semibold text-[#141413]">
                   {user.fullName}
                 </h3>
                 <p className="text-xs text-[#57534E]">
-                  {user.email} · NRIC {user.maskedNric}
+                  {user.email}
                 </p>
               </div>
               <button
@@ -107,7 +107,7 @@ export function AccountModal({
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="rounded border border-[#E4E4E0] bg-white p-3">
-                <div className="text-[#78716C]">Verified Age</div>
+                <div className="text-[#78716C]">Registered Age</div>
                 <div className="mt-1 font-mono font-semibold text-[#141413] tabular-nums">
                   {user.concession.age} years ({user.concession.isOver40 ? 'Over-40 Eligible' : 'Under 40'})
                 </div>
@@ -215,8 +215,8 @@ export function AccountModal({
                         {order.paymentLast4 ? ` ···· ${order.paymentLast4}` : ''}
                       </div>
                       <div>
-                        <span className="text-[#78716C]">Age Verified:</span>{' '}
-                        <span className="tabular-nums">{order.verifiedAgeAtPurchase} yrs</span>
+                        <span className="text-[#78716C]">Learner Age:</span>{' '}
+                        <span className="tabular-nums">{order.ageAtPurchase} yrs</span>
                       </div>
                     </div>
                   </div>

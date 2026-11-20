@@ -31,17 +31,6 @@ export interface MasterclassSession {
   summary: string;
 }
 
-export interface SingpassPersona {
-  id: string;
-  label: string;
-  nric: string;
-  fullName: string;
-  dob: string;
-  email: string;
-  studentId?: string;
-  note: string;
-}
-
 export interface ConcessionBreakdown {
   age: number;
   isOver40: boolean;
@@ -53,24 +42,11 @@ export interface ConcessionBreakdown {
   label: string;
 }
 
-export interface SingpassVerificationResult {
-  verificationToken: string;
-  fullName: string;
-  maskedNric: string;
-  nric: string;
-  dob: string;
-  concession: ConcessionBreakdown;
-  existingAccountEmail?: string;
-  verifiedAt: string;
-}
-
 export interface UserProfile {
   id: string;
   fullName: string;
   email: string;
-  maskedNric: string;
   dob: string;
-  singpassVerified: boolean;
   concession: ConcessionBreakdown;
   createdAt: string;
 }
@@ -97,5 +73,5 @@ export interface SubscriptionOrder {
   billingAddress: string;
   status: 'Active' | 'Confirmed';
   createdAt: string;
-  verifiedAgeAtPurchase: number;
+  ageAtPurchase: number;
 }

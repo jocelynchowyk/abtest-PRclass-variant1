@@ -112,7 +112,7 @@ export function CheckoutDrawer({
             <p className="mt-0.5 text-xs text-[#78716C]">
               {step === 'confirmed'
                 ? 'Official PR Academy subscription receipt'
-                : 'Review term, Singpass concessions, and billing'}
+                : 'Review term, tuition concessions, and billing'}
             </p>
           </div>
           <button
@@ -183,9 +183,9 @@ export function CheckoutDrawer({
                   <span className="font-medium text-[#141413]">{confirmedOrder.learningMode}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#57534E]">Singpass Verified Age</span>
+                  <span className="text-[#57534E]">Age at Enrollment</span>
                   <span className="font-mono text-[#141413] tabular-nums">
-                    {confirmedOrder.verifiedAgeAtPurchase} yrs
+                    {confirmedOrder.ageAtPurchase} yrs
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-[#E4E4E0] pt-3">
@@ -357,27 +357,27 @@ export function CheckoutDrawer({
                 </div>
               </div>
 
-              {/* Singpass & Concession Verification Status */}
+              {/* Account & Concession Status */}
               {user ? (
                 <div className="rounded-md border border-[#E4E4E0] bg-white p-4">
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#141413]">
-                    <ShieldCheck className="h-4 w-4 text-[#C8102E]" aria-hidden="true" />
-                    <span>Verified Singpass Learner: {user.fullName}</span>
+                    <ShieldCheck className="h-4 w-4 text-[#9F1239]" aria-hidden="true" />
+                    <span>Signed in as {user.fullName}</span>
                   </div>
                   <p className="mt-1 text-xs text-[#57534E] tabular-nums">
-                    Verified Age {user.concession.age} · {user.concession.label}
+                    Age {user.concession.age} · {user.concession.label}
                   </p>
                 </div>
               ) : (
                 <div className="rounded-md border border-[#E4E4E0] bg-[#FAFAF9] p-4 space-y-3">
                   <div className="flex items-start gap-2.5">
-                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#C8102E]" aria-hidden="true" />
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#9F1239]" aria-hidden="true" />
                     <div>
                       <p className="text-sm font-semibold text-[#141413]">
-                        Singpass Verification Required for Checkout
+                        Account Required for Checkout
                       </p>
                       <p className="mt-1 text-xs text-[#57534E]">
-                        Sign in or register via Singpass Myinfo to verify your age (20% off for 40+) or Existing Student status (15% off) before payment.
+                        Sign in or create an account to apply your Over-40 (20% off) or Existing Student (15% off) concession before payment.
                       </p>
                     </div>
                   </div>
@@ -385,9 +385,9 @@ export function CheckoutDrawer({
                     <button
                       type="button"
                       onClick={() => onRequestAuth('register')}
-                      className="rounded-md bg-[#C8102E] px-3 py-2 text-xs font-medium text-white hover:bg-[#A50D26] cursor-pointer"
+                      className="rounded-md bg-[#9F1239] px-3 py-2 text-xs font-medium text-white hover:bg-[#881337] cursor-pointer"
                     >
-                      Register via Singpass
+                      Create Account
                     </button>
                     <button
                       type="button"
@@ -591,7 +591,7 @@ export function CheckoutDrawer({
                 <span>
                   {user
                     ? `Proceed to Payment (${formatSGD(totalAmount)})`
-                    : 'Sign In or Verify Singpass Above to Continue'}
+                    : 'Sign In or Create Account Above to Continue'}
                 </span>
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>

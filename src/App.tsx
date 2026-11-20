@@ -9,7 +9,6 @@ import { fetchCatalog, fetchCurrentUser } from './lib/api';
 import type {
   MasterclassSession,
   PlanId,
-  SingpassPersona,
   SubscriptionOrder,
   SubscriptionPlan,
   UserProfile,
@@ -18,7 +17,6 @@ import type {
 export default function App() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [classes, setClasses] = useState<MasterclassSession[]>([]);
-  const [personas, setPersonas] = useState<SingpassPersona[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -55,7 +53,6 @@ export default function App() {
         if (!active) return;
         setPlans(catalog.plans);
         setClasses(catalog.classes);
-        setPersonas(catalog.singpassPersonas);
         setUser(me.user);
         setOrders(me.orders);
         if (me.user) {
@@ -156,7 +153,7 @@ export default function App() {
                     onClick={() => setAccountOpen(true)}
                     className="inline-flex items-center gap-2 rounded-md border border-[#D6D3D1] bg-white px-5 py-3 text-sm font-medium text-[#141413] hover:border-[#141413] transition-colors whitespace-nowrap cursor-pointer"
                   >
-                    <ShieldCheck className="h-4 w-4 text-[#C8102E]" aria-hidden="true" />
+                    <ShieldCheck className="h-4 w-4 text-[#9F1239]" aria-hidden="true" />
                     <span>
                       {user.fullName} · {Math.round(user.concession.appliedRate * 100)}% Concession
                     </span>
@@ -167,8 +164,7 @@ export default function App() {
                     onClick={() => openAuthModal('register')}
                     className="inline-flex items-center gap-2 rounded-md border border-[#D6D3D1] bg-white px-5 py-3 text-sm font-medium text-[#141413] hover:border-[#141413] transition-colors whitespace-nowrap cursor-pointer"
                   >
-                    <ShieldCheck className="h-4 w-4 text-[#C8102E]" aria-hidden="true" />
-                    <span>Register with Singpass</span>
+                    <span>Create Account</span>
                   </button>
                 )}
               </div>
@@ -210,7 +206,7 @@ export default function App() {
                 20% Off
               </div>
               <div className="mt-1 text-xs text-[#57534E]">
-                Learners aged 40+ via Singpass
+                Lifelong learners aged 40 and above
               </div>
             </div>
             <div className="bg-white p-5">
@@ -294,8 +290,8 @@ export default function App() {
                   </div>
                   <p className="mt-0.5 text-[#78716C]">
                     {isSyncedWithVerifiedUser && user
-                      ? `Singpass verified for ${user.fullName} (Age ${user.concession.age})`
-                      : 'Verified automatically via Singpass Myinfo at registration & checkout'}
+                      ? `Applied for ${user.fullName} (Age ${user.concession.age})`
+                      : 'Applied automatically to your account at registration & checkout'}
                   </p>
                 </div>
               </div>
@@ -339,7 +335,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* 3. Curriculum & Singpass Automated Verification Section */}
+        {/* 3. Curriculum & Tuition Concessions Section */}
         <section id="curriculum" className="border-t border-[#E4E4E0] bg-[#F8F8F6] py-16 lg:py-20">
           <div className="mx-auto max-w-[1200px] px-6 grid grid-cols-1 lg:grid-cols-12 gap-12">
             {/* Upcoming Masterclasses */}
@@ -374,20 +370,20 @@ export default function App() {
               </div>
             </div>
 
-            {/* Singpass Age & Alumni Verification Panel */}
+            {/* Tuition Concessions Panel */}
             <div id="concessions" className="lg:col-span-5">
               <div className="rounded-lg border border-[#E4E4E0] bg-white p-7">
-                <div className="flex items-center gap-2.5 text-xs font-semibold tracking-wide text-[#C8102E]">
+                <div className="flex items-center gap-2.5 text-xs font-semibold tracking-wide text-[#9F1239]">
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                  <span>Singpass Myinfo Verification</span>
+                  <span>Tuition Concessions</span>
                 </div>
 
                 <h2 className="mt-3 font-display text-2xl font-semibold text-[#141413] [text-wrap:balance]">
-                  Automated age verification for mid-career & alumni learners.
+                  Dedicated tuition support for mid-career & alumni learners.
                 </h2>
 
                 <p className="mt-3 text-sm leading-relaxed text-[#57534E]">
-                  PR Academy partners with Singpass Myinfo during registration to verify your Date of Birth and NRIC automatically—no manual document uploads or waiting periods required.
+                  PR Academy automatically calculates eligible tuition concessions from your registered date of birth and alumni student record at checkout.
                 </p>
 
                 <dl className="mt-6 space-y-4 border-t border-[#ECECE8] pt-5 text-sm">
@@ -395,7 +391,7 @@ export default function App() {
                     <div>
                       <dt className="font-semibold text-[#141413]">Over-40 Lifelong Learner</dt>
                       <dd className="mt-0.5 text-xs text-[#57534E]">
-                        Automatically applied when Singpass Myinfo confirms age 40 or above.
+                        Automatically applied for learners aged 40 or above.
                       </dd>
                     </div>
                     <dd className="font-mono font-semibold text-[#9F1239] whitespace-nowrap tabular-nums">
@@ -407,7 +403,7 @@ export default function App() {
                     <div>
                       <dt className="font-semibold text-[#141413]">Existing Student Concession</dt>
                       <dd className="mt-0.5 text-xs text-[#57534E]">
-                        Applied to verified PR Academy alumni (e.g. ID <span className="font-mono">PR-2024-089</span>).
+                        Applied to PR Academy alumni (e.g. ID <span className="font-mono">PR-2024-089</span>).
                       </dd>
                     </div>
                     <dd className="font-mono font-semibold text-[#9F1239] whitespace-nowrap tabular-nums">
@@ -435,16 +431,16 @@ export default function App() {
                       onClick={() => setAccountOpen(true)}
                       className="w-full rounded-md bg-[#141413] px-5 py-3 text-sm font-medium text-white hover:bg-[#292524] transition-colors cursor-pointer"
                     >
-                      View My Verified Singpass Status
+                      View My Tuition Concession
                     </button>
                   ) : (
                     <>
                       <button
                         type="button"
                         onClick={() => openAuthModal('register')}
-                        className="w-full rounded-md bg-[#C8102E] px-5 py-3 text-sm font-medium text-white hover:bg-[#A50D26] transition-colors cursor-pointer"
+                        className="w-full rounded-md bg-[#9F1239] px-5 py-3 text-sm font-medium text-white hover:bg-[#881337] transition-colors cursor-pointer"
                       >
-                        Register & Verify via Singpass
+                        Create Learner Account
                       </button>
                       <button
                         type="button"
@@ -478,7 +474,7 @@ export default function App() {
               Curriculum
             </a>
             <a href="#concessions" className="hover:text-[#141413]">
-              Singpass Concessions
+              Tuition Concessions
             </a>
             <button
               type="button"
@@ -495,7 +491,6 @@ export default function App() {
       <AuthModal
         open={authOpen}
         initialMode={authMode}
-        personas={personas}
         onClose={() => setAuthOpen(false)}
         onAuthenticated={(authenticatedUser, userOrders) => {
           setUser(authenticatedUser);
