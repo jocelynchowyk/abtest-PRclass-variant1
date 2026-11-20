@@ -1,5 +1,4 @@
-import { BookOpen, Check, Minus, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Minus, Plus } from 'lucide-react';
 import { formatSGD } from '../lib/api';
 import type { SubscriptionPlan } from '../types';
 
@@ -22,8 +21,6 @@ export function SubscriptionCard({
   discountRate,
   isSelected = false,
 }: SubscriptionCardProps) {
-  const [imgError, setImgError] = useState(false);
-
   const standardTotal = plan.unitPrice * selectedUnits;
   const discountedUnitPrice = Math.round(plan.unitPrice * (1 - discountRate) * 100) / 100;
   const discountedTotal = Math.round(standardTotal * (1 - discountRate) * 100) / 100;
@@ -45,25 +42,7 @@ export function SubscriptionCard({
           : 'border border-[#E4E4E0] hover:border-[#A8A29E]'
       }`}
     >
-      {/* 4:3 Editorial Image Header */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-[6px] bg-[#EFEFED]">
-        {!imgError ? (
-          <img
-            src={plan.imageUrl}
-            alt={`${plan.name} study materials`}
-            referrerPolicy="no-referrer"
-            onError={() => setImgError(true)}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#F4F4F0] to-[#E7E5E0] p-6 text-center">
-            <BookOpen className="h-8 w-8 text-[#78716C] mb-2" />
-            <span className="font-display text-base font-medium text-[#44403C]">{plan.name}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col p-4 sm:p-5 lg:p-6">
+      <div className="flex flex-1 flex-col p-5 sm:p-6">
         {/* Zero-pill quiet text kicker */}
         <p className="text-[11px] sm:text-xs font-medium tracking-wide text-[#78716C]">
           {plan.kicker}

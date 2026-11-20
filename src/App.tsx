@@ -307,7 +307,7 @@ export default function App() {
                   {[1, 2, 3].map((n) => (
                     <div
                       key={n}
-                      className="h-[540px] rounded-lg border border-[#E4E4E0] bg-[#FAFAF9] animate-pulse"
+                      className="h-[440px] rounded-lg border border-[#E4E4E0] bg-[#FAFAF9] animate-pulse"
                     />
                   ))}
                 </div>
